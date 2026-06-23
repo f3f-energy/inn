@@ -772,7 +772,7 @@ function AppPrincipal({ usuario, onLogout }){
                 <span style={{fontWeight:700,fontSize:15,color:form.hot?"#fbbf24":"#6b5a8e"}}>🔥 Lead Quente</span>
               </label>
 
-              <textarea className="campo" rows={2} placeholder="HISTÓRICO / OBSERVAÇÃO" value={form.history||""} onChange={e=>setForm(f=>({...f,history:e.target.value}))} style={{resize:"none"}}/>
+              <textarea className="campo" rows={2} placeholder="HISTÓRICO / OBSERVAÇÃO" value={form.history||historicoAutomatico("observacao")} onChange={e=>setForm(f=>({...f,history:e.target.value}))} style={{resize:"none"}}/>
               <CamposAvancados form={form} setForm={setForm}/>
             </div>
             <div style={{display:"flex",gap:8,marginTop:18}}>
