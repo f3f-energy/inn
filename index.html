@@ -396,8 +396,7 @@ function AppPrincipal({ usuario, onLogout }){
     if(!form.name?.trim()){aviso("Nome obrigatório!","erro");return;}
     setSincStatus("sincronizando");
     const tipo=form.type||"Residencial";
-    const payload={
-     const payload={
+    const payload={  
       name:form.name,
       company:form.company||null,
       phone1:form.phone1||null,
