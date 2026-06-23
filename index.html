@@ -50,7 +50,27 @@ const FORM_VAZIO = {
 };
 
 const PRECO = { Residencial:3500, Empresarial:3200, Outro:3500 };
+  
+function historicoAutomatico(tipo){
+  const agora = new Date();
 
+  const data = agora.toLocaleDateString("pt-BR");
+  const hora = agora.toLocaleTimeString("pt-BR",{
+    hour:"2-digit",
+    minute:"2-digit"
+  });
+
+  const icones = {
+    ligacao:"📞",
+    visita:"🚗",
+    agendamento:"📅",
+    observacao:"📝",
+    proposta:"📋"
+  };
+
+  return `${icones[tipo]||"📝"} ${data} ${hora} - `;
+}
+  
 const CSS = `
   @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&display=swap');
   .btn{cursor:pointer;border:none;font-family:inherit;transition:all .18s;}
