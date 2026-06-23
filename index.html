@@ -396,24 +396,39 @@ function AppPrincipal({ usuario, onLogout }){
     setSincStatus("sincronizando");
     const tipo=form.type||"Residencial";
     const payload={
-      name:form.name,company:form.company||null,phone1:form.phone1||null,
-      phone2:form.phone2||null,email:form.email||null,
-      status:form.status||"sondar",city:form.city||null,state:form.state||"GO",
+     const payload={
+      name:form.name,
+      company:form.company||null,
+      phone1:form.phone1||null,
+      phone2:form.phone2||null,
+      email:form.email||null,
+      status:form.status||"sondar",
+      city:form.city||null,
+      state:form.state||"GO",
       value:form.value?parseFloat(String(form.value).replace(/[^\d.]/g,"")):null,
-      kwp:form.kwp?parseFloat(form.kwp):null,history:form.history||null,
-      probability:form.probability||null,owner:form.owner||usuario.name,
-      visit_or_call:form.visit_or_call||"0",budget:!!form.budget,
-      proposal:!!form.proposal,delivered:!!form.delivered,
-      closed:!!form.closed,post_sales:!!form.post_sales,
+      kwp:form.kwp?parseFloat(form.kwp):null,
+      probability:form.probability||null,
+      owner:form.owner||usuario.name,
+
+      updated_at:new Date().toISOString(),
+      ultima_interacao:new Date().toISOString(),
+
+      visit_or_call:form.visit_or_call||"0",
+      budget:!!form.budget,
+      proposal:!!form.proposal,
+      delivered:!!form.delivered,
+      closed:!!form.closed,
+      post_sales:!!form.post_sales,
       concessionaria:form.concessionaria||"Equatorial",
-      type:tipo, hot:!!form.hot,
+      type:tipo,
+      hot:!!form.hot,
     };
     let error;
     if(modal==="add"){({error}=await sb.from("leads").insert(payload));if(!error)aviso("Lead adicionado! ✅");}
     else{({error}=await sb.from("leads").update(payload).eq("id",sel.id));if(!error)aviso("Lead atualizado! ✅");}
     if(error)aviso("Erro: "+error.message,"erro");
-    await carregarLeads(pagina,filtroStatus,busca);
-    await carregarStats();
+    await carregarStats();await carregarLeads(0,filtroStatus,"");
+    setBusca("");
     setSincStatus("ok");
     fecharModal();
   }
