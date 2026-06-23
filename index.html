@@ -498,8 +498,13 @@ function AppPrincipal({ usuario, onLogout }){
       state:voiceParsed.state||"GO",status:voiceParsed.status||"sondar",
       value:voiceParsed.value?parseFloat(voiceParsed.value):null,
       kwp:voiceParsed.kwp?parseFloat(voiceParsed.kwp):null,
-      history:voiceParsed.history||null,owner:usuario.name,
+      history:voiceParsed.history||null,
+      owner:usuario.name,
       concessionaria:"Equatorial",
+      created_at:new Date().toISOString(),
+      updated_at:new Date().toISOString(),
+      ultima_interacao:new Date().toISOString(),
+      
     });
     if(error)aviso("Erro: "+error.message,"erro");
     else aviso("Lead salvo! ✅");
