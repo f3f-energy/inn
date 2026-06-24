@@ -43,11 +43,11 @@ if %errorlevel% equ 0 (
   echo ═══════════════════════════════════════════
   echo  Publicado com sucesso!
   echo  Versao: v1.0%VER_NOVA%
-  echo  URL: https://inn-crm-f3f-energy.vercel.app
+  echo  URL: https://inn-sepia.vercel.app
   echo ═══════════════════════════════════════════
   echo.
   set /p ABRIR=Abrir no navegador? (S/N):
-  if /i "%ABRIR%"=="S" start https://inn-crm-f3f-energy.vercel.app
+  if /i "%ABRIR%"=="S" start https://inn-sepia.vercel.app
 ) else (
   echo [ERRO] Falha no push. Verifique a conexao.
 )

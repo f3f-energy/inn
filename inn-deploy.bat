@@ -3,7 +3,7 @@ title INN Deploy
 chcp 65001 > nul
 cd /d "C:\_a\inn"
 
-set LINK_VERCEL=https://inn-crm-f3f-energy.vercel.app
+set LINK_VERCEL=https://inn-sepia.vercel.app
 
 cls
 echo.
