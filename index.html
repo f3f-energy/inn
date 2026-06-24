@@ -333,7 +333,7 @@ function AppPrincipal({ usuario, onLogout }){
       if(filtro!=="todos") q=q.eq("status",filtro);
     }
     if(termo.trim()) q=q.or(`name.ilike.%${termo}%,phone1.ilike.%${termo}%,company.ilike.%${termo}%,city.ilike.%${termo}%`);
-    q=q.order("created_at",{ascending:false}).range(pag*POR_PAGINA,(pag+1)*POR_PAGINA-1);
+    q=q.order("updated_at",{ascending:false}).range(pag*POR_PAGINA,(pag+1)*POR_PAGINA-1);
     const {data,error,count}=await q;
     if(error){aviso("Erro ao carregar: "+error.message,"erro");}
     else{setLeads(data||[]);setTotalBanco(count||0);}
