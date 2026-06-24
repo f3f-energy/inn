@@ -269,7 +269,7 @@ function TelaLogin({ onLogin }){
             <span style={{fontSize:36,fontWeight:800,color:"#fbbf24",fontFamily:"Sora,sans-serif"}}>I</span>
           </div>
           <div style={{fontWeight:800,fontSize:38,letterSpacing:"-0.04em",color:"#fff"}}>INN</div>
-          <div style={{fontSize:13,color:"#6b5a8e",fontWeight:500,marginTop:4}}>Innovatis Energia</div>
+          <div style={{fontSize:13,color:"#6b5a8e",fontWeight:500,marginTop:4}}>Inn Technology</div>
         </div>
         <div className="card" style={{padding:28}}>
           <div style={{marginBottom:16}}>
@@ -288,7 +288,7 @@ function TelaLogin({ onLogin }){
             {carregando?"Entrando...":"Entrar"}
           </button>
         </div>
-        <div style={{textAlign:"center",marginTop:20,fontSize:11,color:"#2d1b69"}}>Innovatis © {new Date().getFullYear()}</div>
+        <div style={{textAlign:"center",marginTop:20,fontSize:11,color:"#2d1b69"}}>Inn Technology © {new Date().getFullYear()}</div>
       </div>
     </div>
   );
@@ -458,7 +458,7 @@ function AppPrincipal({ usuario, onLogout }){
 
   function abrirWhatsApp(l){
     const num=l.phone1||l.phone2;if(!num){aviso("Sem telefone.","erro");return;}
-    const msg=encodeURIComponent(`Olá ${(l.name||"").split(" ")[0]}, tudo bem? Sou da Innovatis Energia Solar e gostaria de conversar sobre como podemos reduzir sua conta de luz. 😊☀️`);
+    const msg=encodeURIComponent(`Olá ${(l.name||"").split(" ")[0]}, tudo bem? Sou da Inn Technology e gostaria de conversar sobre como podemos reduzir sua conta de luz. 😊☀️`);
     window.open(`https://wa.me/${limpaNum(num)}?text=${msg}`,"_blank");
     registrarContato(l.id);
   }
