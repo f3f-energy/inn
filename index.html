@@ -422,6 +422,10 @@ function AppPrincipal({ usuario, onLogout }){
       concessionaria:form.concessionaria||"Equatorial",
       type:tipo,
       hot:!!form.hot,
+      history:form.history||null,
+      referencia:form.referencia||null,
+      indicacao:form.indicacao||null,
+      prospectando:!!form.prospectando,
     };
     let error;
     if(modal==="add"){({error}=await sb.from("leads").insert(payload));if(!error)aviso("Lead adicionado! ✅");}
@@ -787,7 +791,7 @@ function AppPrincipal({ usuario, onLogout }){
                 <span style={{fontWeight:700,fontSize:15,color:form.hot?"#fbbf24":"#6b5a8e"}}>🔥 Lead Quente</span>
               </label>
 
-              <textarea className="campo" rows={2} placeholder="HISTÓRICO / OBSERVAÇÃO" value={form.history||historicoAutomatico("observacao")} onChange={e=>setForm(f=>({...f,history:e.target.value}))} style={{resize:"none"}}/>
+              <textarea className="campo" rows={3} placeholder="HISTÓRICO / OBSERVAÇÃO" value={form.history||""} onFocus={e=>{if(!form.history){const p=historicoAutomatico("observacao");setForm(f=>({...f,history:p}));}} } onChange={e=>setForm(f=>({...f,history:e.target.value}))} style={{resize:"vertical"}}/>
               <CamposAvancados form={form} setForm={setForm}/>
             </div>
             <div style={{display:"flex",gap:8,marginTop:18}}>
