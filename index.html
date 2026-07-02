@@ -826,8 +826,8 @@ function AppPrincipal({ usuario, onLogout }){
               <select className="campo" value={form.status||"sondar"} onChange={e=>setForm(f=>({...f,status:e.target.value}))}>
                 {STATUS_KEYS.map(k=><option key={k} value={k}>{STATUS_MAP[k].label}</option>)}
               </select>
-              <input className="campo" placeholder="REFERÊNCIA (ponto de referência)" value={form.pg||""} onChange={e=>setForm(f=>({...f,pg:e.target.value}))}/>
-              <input className="campo" placeholder="INDICAÇÃO (quem indicou)" value={form.titular||""} onChange={e=>setForm(f=>({...f,titular:e.target.value}))}/>
+              <input className="campo" placeholder="REFERÊNCIA (ponto de referência)" value={form.referencia||""} onChange={e=>setForm(f=>({...f,referencia:e.target.value}))}/>
+              <input className="campo" placeholder="INDICAÇÃO (quem indicou)" value={form.indicacao||""} onChange={e=>setForm(f=>({...f,indicacao:e.target.value}))}/>
               {/* HOT CHECKBOX */}
               <label style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",background:form.hot?"rgba(251,191,36,.1)":"#080412",border:`1.5px solid ${form.hot?"#fbbf24":"#2d1b69"}`,borderRadius:10,cursor:"pointer",transition:"all .2s"}}>
                 <input type="checkbox" checked={!!form.hot} onChange={e=>setForm(f=>({...f,hot:e.target.checked}))} style={{width:20,height:20,accentColor:"#fbbf24",cursor:"pointer"}}/>
@@ -863,7 +863,7 @@ function AppPrincipal({ usuario, onLogout }){
               <button className="btn" onClick={fecharModal} style={{color:"#6b5a8e",background:"none",fontSize:22,flexShrink:0}}>✕</button>
             </div>
             <div style={{display:"grid",gap:10,marginBottom:14}}>
-              {[[sel.type,"🏷️","Tipo"],[sel.phone1,"📞","Telefone"],[sel.phone2,"📱","Tel. Secundário"],[sel.email,"✉️","Email"],[(sel.city||sel.state)?[sel.city,sel.state].filter(Boolean).join(" - "):null,"📍","Localização"],[sel.value?fmtValor(sel.value)+(sel.kwp?` · ${sel.kwp} kWp`:""):null,"💰","Valor"],[sel.probability,"🎯","Probabilidade"],[sel.owner,"👤","Responsável"],[sel.pg,"📌","Referência"],[sel.titular,"🤝","Indicação"],[sel.concessionaria,"⚡","Concessionária"]].filter(([v])=>v).map(([val,ic,lbl],i)=>(
+              {[[sel.type,"🏷️","Tipo"],[sel.phone1,"📞","Telefone"],[sel.phone2,"📱","Tel. Secundário"],[sel.email,"✉️","Email"],[(sel.city||sel.state)?[sel.city,sel.state].filter(Boolean).join(" - "):null,"📍","Localização"],[sel.value?fmtValor(sel.value)+(sel.kwp?` · ${sel.kwp} kWp`:""):null,"💰","Valor"],[sel.probability,"🎯","Probabilidade"],[sel.owner,"👤","Responsável"],[sel.referencia,"📌","Referência"],[sel.indicacao,"🤝","Indicação"],[sel.concessionaria,"⚡","Concessionária"]].filter(([v])=>v).map(([val,ic,lbl],i)=>(
                 <div key={i} style={{display:"flex",gap:10,alignItems:"center"}}>
                   <span style={{fontSize:16}}>{ic}</span>
                   <div><div style={{fontSize:11,color:"#6b5a8e"}}>{lbl}</div><div style={{fontSize:14,fontWeight:600}}>{val}</div></div>
