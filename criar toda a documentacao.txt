@@ -1,0 +1,365 @@
+ok entao vamos criar toda a documentação certinha preciso de tudo documentado
+
+Concordo completamente. Depois do que aconteceu, o INN precisa ter uma documentação que permita reconstruir o sistema inteiro, mesmo que o banco seja apagado novamente.
+
+Minha proposta é transformar o projeto em um sistema "autodocumentado". Cada mudança importante passa primeiro pela documentação e só depois pelo código.
+
+Estrutura oficial do INN
+inn/
+
+docs/
+│
+├── 00_VISÃO_GERAL.md
+├── 01_ARQUITETURA.md
+├── 02_BANCO_DE_DADOS.md
+├── 03_REGRAS_DE_NEGOCIO.md
+├── 04_FLUXO_COMERCIAL.md
+├── 05_API_SUPABASE.md
+├── 06_INTERFACE.md
+├── 07_VOZ_E_IA.md
+├── 08_INSTALACAO.md
+├── 09_DEPLOY.md
+├── 10_BACKUP_E_RESTAURACAO.md
+├── 11_SEGURANCA.md
+├── 12_CHANGELOG.md
+├── 13_ROADMAP.md
+├── MASTER_CONTEXT.md
+└── RECOVERY.md
+00_VISÃO_GERAL
+
+Explica:
+
+missão do INN
+objetivo
+filosofia
+princípios
+01_ARQUITETURA
+
+Tudo da arquitetura.
+
+React
+
+Supabase
+
+Vercel
+
+GitHub
+
+IA
+
+Parser de voz
+
+Fluxograma completo.
+
+02_BANCO_DE_DADOS
+
+Uma página para cada tabela.
+
+leads
+
+Todos os campos
+
+Tipo
+
+Obrigatório
+
+Descrição
+
+Exemplo
+
+Relacionamentos
+
+Índices
+
+Políticas RLS
+
+SQL completo para recriar.
+
+users
+
+idem
+
+consultants
+
+idem
+
+03_REGRAS_DE_NEGÓCIO
+
+Exemplo
+
+Um cliente nunca pode ser duplicado.
+
+Sempre procurar por
+
+Telefone
+
+CPF
+
+Nome semelhante
+
+Empresa
+
+Antes de inserir.
+
+Todas as regras ficam aqui.
+
+04_FLUXO COMERCIAL
+
+Fluxo completo.
+
+1 Sondar
+
+↓
+
+2 Lead
+
+↓
+
+3 Agendar
+
+↓
+
+4 Visitar
+
+↓
+
+5 Prospect
+
+↓
+
+6 Proposta
+
+↓
+
+7 Contrato
+
+↓
+
+8 Procuração
+
+↓
+
+9 Cliente
+
+Explicar exatamente o significado de cada etapa.
+
+05 API SUPABASE
+
+Todas as consultas.
+
+Todos os INSERT.
+
+Todos os UPDATE.
+
+Todos os DELETE.
+
+Todos os filtros.
+
+06 Interface
+
+Cada tela.
+
+Login
+
+Dashboard
+
+Leads
+
+Relatórios
+
+Voz
+
+Configurações
+
+Com imagens.
+
+07 Voz e IA
+
+Funcionamento.
+
+Parser.
+
+Prompt.
+
+OpenAI.
+
+Claude.
+
+Google.
+
+Fluxo de confirmação.
+
+08 Instalação
+
+Do zero.
+
+Python
+
+Git
+
+Supabase
+
+Vercel
+
+Deploy
+
+Primeira execução.
+
+09 Deploy
+
+Como publicar.
+
+GitHub
+
+Vercel
+
+Atualizações.
+
+10 Backup e Recuperação
+
+Este será o documento mais importante.
+
+Explica exatamente:
+
+Como exportar banco.
+
+Como exportar contatos.
+
+Como recuperar tudo.
+
+Como nunca mais perder histórico.
+
+Checklist antes de executar qualquer SQL destrutivo.
+
+11 Segurança
+
+RLS
+
+Policies
+
+Permissões.
+
+12 Changelog
+
+Todas as versões.
+
+v1.000
+
+v1.001
+
+...
+
+v1.009
+
+13 Roadmap
+
+Tudo planejado.
+
+MASTER_CONTEXT
+
+A memória do projeto.
+
+Todas as decisões importantes.
+
+Nunca apagar.
+
+RECOVERY.md
+
+O documento que nos faltou.
+
+Ele terá itens como:
+
+Nunca executar DROP TABLE sem backup completo.
+Exportar banco antes de alterações estruturais.
+Validar a estrutura após migrações.
+Confirmar compatibilidade entre código e banco.
+Procedimento completo de restauração.
+Um ponto que eu acrescentaria
+
+Depois do que aconteceu com os 2.297 leads, eu criaria um documento chamado DATA_MODEL.sql contendo a versão oficial do banco.
+
+Sempre que um campo novo for criado (ultima_interacao, por exemplo), esse arquivo é atualizado primeiro. Assim nunca mais teremos um código esperando uma coluna que não existe.
+
+Além disso, faria um SCHEMA_VERSION.md, registrando quais versões do aplicativo são compatíveis com quais versões do banco. Isso evita exatamente o tipo de desencontro que aconteceu agora.
+
+Acredito que, organizando o INN dessa forma, você terá um projeto que qualquer desenvolvedor consegue entender, manter e restaurar com segurança, sem depender da memória das conversas.
+
+como e onde vou salvar esse .txt 
+
+Na verdade eu não salvaria em .txt.
+
+Como o projeto já está no GitHub, o ideal é documentar tudo em Markdown (.md), porque o GitHub exibe esses arquivos de forma organizada.
+
+Eu faria assim:
+
+C:\_a\inn\
+│
+├── index.html
+├── importar_contatos.py
+├── README.md
+│
+├── docs\
+│   ├── 00_VISÃO_GERAL.md
+│   ├── 01_ARQUITETURA.md
+│   ├── 02_BANCO_DE_DADOS.md
+│   ├── 03_REGRAS_DE_NEGOCIO.md
+│   ├── 04_FLUXO_COMERCIAL.md
+│   ├── 05_API_SUPABASE.md
+│   ├── 06_INTERFACE.md
+│   ├── 07_VOZ_E_IA.md
+│   ├── 08_INSTALACAO.md
+│   ├── 09_DEPLOY.md
+│   ├── 10_BACKUP_E_RESTAURACAO.md
+│   ├── 11_SEGURANCA.md
+│   ├── 12_CHANGELOG.md
+│   ├── 13_ROADMAP.md
+│   ├── MASTER_CONTEXT.md
+│   └── DATA_MODEL.sql
+│
+├── backups\
+├── scripts\
+└── contatos.json
+Como criar
+
+No Windows:
+
+Abra C:\_a\inn
+Crie uma pasta chamada docs
+Dentro dela crie os arquivos:
+00_VISÃO_GERAL.md
+01_ARQUITETURA.md
+02_BANCO_DE_DADOS.md
+...
+
+Você pode criar pelo Bloco de Notas:
+
+Arquivo → Salvar Como...
+Tipo: Todos os arquivos
+Nome:
+02_BANCO_DE_DADOS.md
+
+e pronto.
+
+O arquivo mais importante
+
+Depois do que aconteceu com os 2.297 leads, eu criaria um arquivo que será a fonte oficial da estrutura do banco:
+
+C:\_a\inn\docs\DATA_MODEL.sql
+
+Nele ficará 100% do SQL para recriar o banco, incluindo:
+
+tabela leads
+tabela users
+tabela consultants
+índices
+RLS
+Policies
+constraints
+alterações (ALTER TABLE)
+migrações
+
+Assim, se um dia alguém apagar o banco novamente, basta executar esse único arquivo e a estrutura volta exatamente como deve ser.
+
+Minha proposta
+
+Em vez de ir criando tudo manualmente, nós vamos escrever essa documentação juntos. Começamos pelo DATA_MODEL.sql (estrutura oficial do banco) e pelo 02_BANCO_DE_DADOS.md (explicação de cada campo). Depois seguimos para os demais documentos, um por um, até o INN ficar completamente documentado. Isso evita que o projeto dependa da memória das nossas conversas.

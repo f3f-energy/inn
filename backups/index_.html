@@ -167,95 +167,74 @@ function CamposAvancados({ form, setForm }){
   );
 }
 
-/* ════ RELATÓRIO DO DIA ════ */
+/* ════ RELATÓRIO INTELIGENTE ════ */
 function RelatorioInteligente({ usuario, sb, hoje, fmtValor }){
-  const [leadsHoje, setLeadsHoje] = useState([]);
+  const [dados, setDados] = useState(null);
   const [carregando, setCarregando] = useState(true);
+  const [leadQuente, setLeadQuente] = useState("");
+  const [objecao, setObjecao] = useState("");
   const [amanha, setAmanha] = useState("");
   const [copiado, setCopiado] = useState(false);
-  const hojeFmt = new Date().toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit"});
 
   useEffect(()=>{
     async function carregar(){
       setCarregando(true);
-      const {data} = await sb.from("leads")
-        .select("id,name,status,history,value,city,visit_or_call,updated_at")
-        .gte("updated_at", hoje+"T00:00:00")
-        .lte("updated_at", hoje+"T23:59:59")
-        .eq("owner", usuario.name)
-        .order("updated_at",{ascending:false});
-      setLeadsHoje(data||[]);
-      try{ const s=localStorage.getItem("inn_am_"+hoje); if(s) setAmanha(s); }catch{}
+      const [criados, contatados, visitas, propostas, fechados] = await Promise.all([
+        sb.from("leads").select("*").gte("created_at",hoje+"T00:00:00").lte("created_at",hoje+"T23:59:59").eq("owner",usuario.name),
+        sb.from("leads").select("*").gte("updated_at",hoje+"T00:00:00").lte("updated_at",hoje+"T23:59:59").eq("owner",usuario.name).gt("visit_or_call","0"),
+        sb.from("leads").select("*").eq("status","visitar").eq("owner",usuario.name),
+        sb.from("leads").select("*").eq("status","proposal").eq("owner",usuario.name),
+        sb.from("leads").select("*").eq("status","client").eq("owner",usuario.name),
+      ]);
+      setDados({ criados:criados.data||[], contatados:contatados.data||[], visitas:visitas.data||[], propostas:propostas.data||[], fechados:fechados.data||[] });
+      try{ const s=localStorage.getItem("inn_rel_"+hoje); if(s){ const p=JSON.parse(s); setLeadQuente(p.lq||""); setObjecao(p.ob||""); setAmanha(p.am||""); } }catch{}
       setCarregando(false);
     }
     carregar();
   },[]);
 
-  function linhasHoje(history){
-    if(!history) return [];
-    return history.split("\n").filter(l=>l.startsWith(hojeFmt));
-  }
+  function salvar(lq,ob,am){ try{localStorage.setItem("inn_rel_"+hoje,JSON.stringify({lq,ob,am}));}catch{} }
 
   function gerarTexto(){
+    if(!dados)return"";
     const d=new Date().toLocaleDateString("pt-BR",{weekday:"long",day:"2-digit",month:"2-digit",year:"numeric"});
     let txt=`☀️ *RELATÓRIO DIÁRIO INN*\n👤 ${usuario.name.split(" ")[0]}\n📅 ${d}\n${"─".repeat(30)}\n\n`;
-    txt+=`*Leads trabalhados: ${leadsHoje.length}*\n\n`;
-    leadsHoje.forEach(l=>{
-      txt+=`👤 *${l.name}*${l.city?` · ${l.city}`:""}\n`;
-      txt+=`   ${statusInfo(l.status).label}\n`;
-      linhasHoje(l.history).forEach(ln=>{ txt+=`   ${ln}\n`; });
-      txt+="\n";
-    });
-    if(amanha) txt+=`\n*Plano amanhã:*\n${amanha}\n`;
-    txt+=`\n${"─".repeat(30)}\n_Enviado via INN Technology_`;
+    txt+=`*1️⃣ Atividade de hoje:*\n   📋 Leads cadastrados: ${dados.criados.length}\n   📞 Contatos realizados: ${dados.contatados.length}\n   🚗 Em visita: ${dados.visitas.length}\n`;
+    if(dados.criados.length>0){ txt+=`\n*2️⃣ Novos leads:*\n`; dados.criados.slice(0,5).forEach(l=>{ txt+=`   • ${l.name}${l.city?` · ${l.city}`:""}\n`; }); if(dados.criados.length>5)txt+=`   ... e mais ${dados.criados.length-5}\n`; }
+    if(leadQuente)txt+=`\n*3️⃣ Lead quente:*\n   🔥 ${leadQuente}\n`;
+    if(objecao)txt+=`\n*4️⃣ Principal objeção:*\n   ⚠️ ${objecao}\n`;
+    if(dados.propostas.length>0){ txt+=`\n*5️⃣ Propostas abertas:*\n`; dados.propostas.forEach(l=>{ txt+=`   💰 ${l.name}${l.value?` — ${fmtValor(l.value)}`:""}\n`; }); }
+    if(dados.fechados.length>0){ txt+=`\n*6️⃣ Fechamentos:*\n`; dados.fechados.forEach(l=>{ txt+=`   ✅ ${l.name}${l.value?` — ${fmtValor(l.value)}`:""}\n`; }); }
+    if(amanha)txt+=`\n*7️⃣ Amanhã:*\n   📋 ${amanha}\n`;
+    txt+=`\n${"─".repeat(30)}\n_Enviado via INN_`;
     return txt;
   }
 
   function copiar(){ navigator.clipboard.writeText(gerarTexto()).then(()=>{ setCopiado(true); setTimeout(()=>setCopiado(false),3000); }); }
 
-  if(carregando) return <div style={{textAlign:"center",padding:40,color:"#7c3aed"}}>⏳ Carregando...</div>;
+  if(carregando)return<div style={{textAlign:"center",padding:40,color:"#7c3aed"}}>⏳ Carregando dados do dia...</div>;
 
   return(
     <div className="fade">
-      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:4}}>
-        <div style={{fontWeight:800,fontSize:18}}>📋 Relatório do Dia</div>
-        <div style={{fontSize:12,color:"#10b981",fontWeight:700}}>{leadsHoje.length} leads trabalhados</div>
+      <div style={{fontWeight:800,fontSize:18,marginBottom:4}}>📋 Relatório do Dia</div>
+      <div style={{fontSize:12,color:"#6b5a8e",marginBottom:16}}>Dados automáticos do banco + suas anotações.</div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:16}}>
+        {[{label:"Leads hoje",val:dados.criados.length,cor:"#fbbf24"},{label:"Contatos",val:dados.contatados.length,cor:"#3b82f6"},{label:"Em visita",val:dados.visitas.length,cor:"#06b6d4"},{label:"Propostas",val:dados.propostas.length,cor:"#a855f7"},{label:"Fechamentos",val:dados.fechados.length,cor:"#10b981"}].map(s=>(
+          <div key={s.label} className="card" style={{padding:"14px 16px",position:"relative",overflow:"hidden"}}>
+            <div style={{fontSize:26,fontWeight:800,color:s.cor}}>{s.val}</div>
+            <div style={{fontSize:11,color:"#6b5a8e",fontWeight:600}}>{s.label}</div>
+            <div style={{position:"absolute",right:-6,top:-6,width:50,height:50,borderRadius:"50%",background:`${s.cor}18`}}/>
+          </div>
+        ))}
       </div>
-      <div style={{fontSize:12,color:"#6b5a8e",marginBottom:16}}>Cada ação (ligação, WhatsApp, status) é registrada automaticamente.</div>
-
-      {leadsHoje.length===0
-        ? <div style={{textAlign:"center",padding:40,color:"#6b5a8e"}}>Nenhum lead trabalhado hoje ainda.</div>
-        : leadsHoje.map(l=>{
-            const linhas=linhasHoje(l.history);
-            return(
-              <div key={l.id} className="rel-bloco" style={{marginBottom:10}}>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
-                  <div style={{fontWeight:700,fontSize:14,color:"#e8eaf6"}}>{l.name}</div>
-                  <span className="badge" style={{background:`${statusInfo(l.status).cor}20`,color:statusInfo(l.status).cor,fontSize:10}}>{statusInfo(l.status).label}</span>
-                </div>
-                {l.city&&<div style={{fontSize:11,color:"#6b5a8e",marginBottom:6}}>{l.city}</div>}
-                {linhas.length>0
-                  ? <div style={{borderTop:"1px solid #2d1b69",paddingTop:8}}>
-                      {linhas.map((ln,i)=><div key={i} style={{fontSize:12,color:"#a78bfa",padding:"2px 0",lineHeight:1.6}}>{ln}</div>)}
-                    </div>
-                  : <div style={{fontSize:12,color:"#6b5a8e",borderTop:"1px solid #2d1b69",paddingTop:8}}>📞 {l.visit_or_call||0} contato(s) registrado(s)</div>
-                }
-              </div>
-            );
-          })
-      }
-
-      <div className="rel-bloco" style={{margin:"16px 0"}}>
-        <div className="lbl">📋 Plano de amanhã</div>
-        <textarea className="campo" rows={2} placeholder="Quem visitar, ligar, enviar proposta..." value={amanha}
-          onChange={e=>{setAmanha(e.target.value);try{localStorage.setItem("inn_am_"+hoje,e.target.value);}catch{}}}
-          style={{marginTop:8,resize:"none"}}/>
-      </div>
-
+      {dados.criados.length>0&&(<div className="rel-bloco" style={{marginBottom:12}}><div className="lbl">Novos leads hoje</div>{dados.criados.map(l=>(<div key={l.id} style={{fontSize:13,color:"#94a3b8",padding:"4px 0",borderBottom:"1px solid #2d1b69"}}>{l.name}{l.city?` · ${l.city}`:""}</div>))}</div>)}
+      <div className="rel-bloco" style={{marginBottom:10}}><div className="lbl">🔥 Lead quente</div><input className="campo" placeholder="Ex: Marcone Armazém Purim" value={leadQuente} onChange={e=>{setLeadQuente(e.target.value);salvar(e.target.value,objecao,amanha);}} style={{marginTop:8}}/></div>
+      <div className="rel-bloco" style={{marginBottom:10}}><div className="lbl">⚠️ Principal objeção</div><input className="campo" placeholder="Ex: Financiamento..." value={objecao} onChange={e=>{setObjecao(e.target.value);salvar(leadQuente,e.target.value,amanha);}} style={{marginTop:8}}/></div>
+      <div className="rel-bloco" style={{marginBottom:16}}><div className="lbl">📋 Plano de amanhã</div><textarea className="campo" rows={2} placeholder="Quem visitar, ligar..." value={amanha} onChange={e=>{setAmanha(e.target.value);salvar(leadQuente,objecao,e.target.value);}} style={{marginTop:8,resize:"none"}}/></div>
       <div style={{background:"#080412",border:"1px solid #2d1b69",borderRadius:12,padding:16,marginBottom:16,fontFamily:"monospace",fontSize:12,color:"#94a3b8",lineHeight:1.8,whiteSpace:"pre-wrap",wordBreak:"break-word"}}>{gerarTexto()}</div>
       <div style={{display:"flex",gap:10}}>
         <button className="btn" onClick={copiar} style={{flex:1,background:copiado?"linear-gradient(135deg,#10b981,#059669)":"#1a0f38",color:copiado?"#fff":"#94a3b8",borderRadius:12,padding:14,fontWeight:700,fontSize:14,transition:"all .3s"}}>{copiado?"✅ Copiado!":"📋 Copiar"}</button>
-        <button className="btn" onClick={()=>window.open(`https://wa.me/?text=${encodeURIComponent(gerarTexto())}`,"_blank")} style={{flex:1,background:"linear-gradient(135deg,#25d366,#128c7e)",color:"#fff",borderRadius:12,padding:14,fontWeight:700,fontSize:14}}>💬 Enviar</button>
+        <button className="btn" onClick={()=>window.open(`https://wa.me/?text=${encodeURIComponent(gerarTexto())}`,"_blank")} style={{flex:1,background:"linear-gradient(135deg,#25d366,#128c7e)",color:"#fff",borderRadius:12,padding:14,fontWeight:700,fontSize:14}}>💬 WhatsApp</button>
       </div>
     </div>
   );
@@ -290,7 +269,7 @@ function TelaLogin({ onLogin }){
             <span style={{fontSize:36,fontWeight:800,color:"#fbbf24",fontFamily:"Sora,sans-serif"}}>I</span>
           </div>
           <div style={{fontWeight:800,fontSize:38,letterSpacing:"-0.04em",color:"#fff"}}>INN</div>
-          <div style={{fontSize:13,color:"#6b5a8e",fontWeight:500,marginTop:4}}>Inn Technology</div>
+          <div style={{fontSize:13,color:"#6b5a8e",fontWeight:500,marginTop:4}}>Innovatis Energia</div>
         </div>
         <div className="card" style={{padding:28}}>
           <div style={{marginBottom:16}}>
@@ -309,7 +288,7 @@ function TelaLogin({ onLogin }){
             {carregando?"Entrando...":"Entrar"}
           </button>
         </div>
-        <div style={{textAlign:"center",marginTop:20,fontSize:11,color:"#2d1b69"}}>© {new Date().getFullYear()} Inn Technology · Todos os direitos reservados</div>
+        <div style={{textAlign:"center",marginTop:20,fontSize:11,color:"#2d1b69"}}>Innovatis © {new Date().getFullYear()}</div>
       </div>
     </div>
   );
@@ -354,7 +333,7 @@ function AppPrincipal({ usuario, onLogout }){
       if(filtro!=="todos") q=q.eq("status",filtro);
     }
     if(termo.trim()) q=q.or(`name.ilike.%${termo}%,phone1.ilike.%${termo}%,company.ilike.%${termo}%,city.ilike.%${termo}%`);
-    q=q.order("updated_at",{ascending:false}).range(pag*POR_PAGINA,(pag+1)*POR_PAGINA-1);
+    q=q.order("created_at",{ascending:false}).range(pag*POR_PAGINA,(pag+1)*POR_PAGINA-1);
     const {data,error,count}=await q;
     if(error){aviso("Erro ao carregar: "+error.message,"erro");}
     else{setLeads(data||[]);setTotalBanco(count||0);}
@@ -400,23 +379,7 @@ function AppPrincipal({ usuario, onLogout }){
     setForm({...FORM_VAZIO,owner:usuario.name});
     setModal("busca");
   }
-  async function abrirEditar(l){
-    const { data, error } = await sb
-      .from("leads")
-      .select("*")
-      .eq("id", l.id)
-      .single();
-
-    if(error){
-      console.error(error);
-      aviso("Erro ao carregar lead.","erro");
-      return;
-    }
-
-    setSel(data);
-    setForm({...data});
-    setModal("edit");
-  }
+  function abrirEditar(l){setSel(l);setForm({...l});setModal("edit");}
   function abrirVer(l){setSel(l);setModal("view");}
   function fecharModal(){setModal(null);setSel(null);}
 
@@ -432,15 +395,6 @@ function AppPrincipal({ usuario, onLogout }){
   async function salvarLead(){
     if(!form.name?.trim()){aviso("Nome obrigatório!","erro");return;}
     setSincStatus("sincronizando");
-    // Calcula histórico final com log de status se mudou
-    let historyFinal=form.history||null;
-    if(modal==="edit" && sel?.status && sel.status!==form.status){
-      const agora=new Date();
-      const dt=agora.toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit"});
-      const hr=agora.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});
-      const entrada=`${dt} ${hr} - 🔄 Status: ${statusInfo(sel.status).label} → ${statusInfo(form.status).label}`;
-      historyFinal=historyFinal?entrada+"\n"+historyFinal:entrada;
-    }
     const tipo=form.type||"Residencial";
     const payload={  
       name:form.name,
@@ -468,18 +422,10 @@ function AppPrincipal({ usuario, onLogout }){
       concessionaria:form.concessionaria||"Equatorial",
       type:tipo,
       hot:!!form.hot,
-      history:historyFinal,
-      referencia:form.referencia||null,
-      indicacao:form.indicacao||null,
-      prospectando:!!form.prospectando,
     };
-
-    console.log("=== INN DEBUG ===");
-    console.log("Payload:", payload);
     let error;
     if(modal==="add"){({error}=await sb.from("leads").insert(payload));if(!error)aviso("Lead adicionado! ✅");}
     else{({error}=await sb.from("leads").update(payload).eq("id",sel.id));if(!error)aviso("Lead atualizado! ✅");}
-    console.log("Supabase error:", error);
     if(error)aviso("Erro: "+error.message,"erro");
     await carregarStats();await carregarLeads(0,filtroStatus,"");
     setBusca("");
@@ -491,7 +437,6 @@ function AppPrincipal({ usuario, onLogout }){
     if(!confirm("Excluir este lead?"))return;
     setSincStatus("sincronizando");
     const {error}=await sb.from("leads").delete().eq("id",id);
-    console.log("Supabase error:", error);
     if(error)aviso("Erro: "+error.message,"erro");
     else aviso("Lead removido.","erro");
     await carregarLeads(pagina,filtroStatus,busca);
@@ -500,23 +445,10 @@ function AppPrincipal({ usuario, onLogout }){
     fecharModal();
   }
 
-  async function appendHistory(leadId, texto){
-    const agora=new Date();
-    const dt=agora.toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit"});
-    const hr=agora.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});
-    const entrada=`${dt} ${hr} - ${texto}`;
-    const {data}=await sb.from("leads").select("history").eq("id",leadId).single();
-    const atual=data?.history||"";
-    const nova=atual?entrada+"\n"+atual:entrada;
-    await sb.from("leads").update({history:nova,updated_at:new Date().toISOString()}).eq("id",leadId);
-    return nova;
-  }
-
   async function registrarContato(id){
     const l=leads.find(x=>x.id===id);if(!l)return;
     const novas=parseInt(l.visit_or_call||"0")+1;
     setSincStatus("sincronizando");
-    await appendHistory(id,"📞 Ligação registrada");
     await sb.from("leads").update({visit_or_call:String(novas)}).eq("id",id);
     await carregarLeads(pagina,filtroStatus,busca);
     setSincStatus("ok");
@@ -526,9 +458,9 @@ function AppPrincipal({ usuario, onLogout }){
 
   function abrirWhatsApp(l){
     const num=l.phone1||l.phone2;if(!num){aviso("Sem telefone.","erro");return;}
-    const msg=encodeURIComponent(`Olá ${(l.name||"").split(" ")[0]}, tudo bem? Sou da Inn Technology e gostaria de conversar sobre como podemos reduzir sua conta de luz. 😊☀️`);
+    const msg=encodeURIComponent(`Olá ${(l.name||"").split(" ")[0]}, tudo bem? Sou da Innovatis Energia Solar e gostaria de conversar sobre como podemos reduzir sua conta de luz. 😊☀️`);
     window.open(`https://wa.me/${limpaNum(num)}?text=${msg}`,"_blank");
-    appendHistory(l.id,"💬 WhatsApp enviado").then(()=>carregarLeads(pagina,filtroStatus,busca));
+    registrarContato(l.id);
   }
 
   function exportarCSV(){
@@ -589,7 +521,6 @@ function AppPrincipal({ usuario, onLogout }){
       ultima_interacao:new Date().toISOString(),
       
     });
-    console.log("Supabase error:", error);
     if(error)aviso("Erro: "+error.message,"erro");
     else aviso("Lead salvo! ✅");
     await carregarLeads(0,filtroStatus,busca);
@@ -621,7 +552,7 @@ function AppPrincipal({ usuario, onLogout }){
           <span style={{fontSize:18,fontWeight:800,color:"#fbbf24"}}>I</span>
         </div>
         <div style={{flex:1,minWidth:0}}>
-          <div style={{fontWeight:800,fontSize:20,letterSpacing:"-0.04em",color:"#fff",lineHeight:1}}>INN <span style={{color:"#6b5a8e",fontSize:10,fontWeight:500}}>v1.010</span></div>
+          <div style={{fontWeight:800,fontSize:20,letterSpacing:"-0.04em",color:"#fff",lineHeight:1}}>INN <span style={{color:"#6b5a8e",fontSize:10,fontWeight:500}}>v1.00999</span></div>
           <div style={{fontSize:10,color:"#6b5a8e",fontWeight:600,marginTop:1,display:"flex",alignItems:"center"}}>
             <span className="sync-dot" style={{background:sincStatus==="ok"?"#10b981":sincStatus==="sincronizando"?"#fbbf24":"#ef4444"}}/>
             {totalBanco} leads · {sincStatus==="ok"?"Sincronizado":sincStatus==="sincronizando"?"Salvando...":"Erro"}
@@ -848,15 +779,15 @@ function AppPrincipal({ usuario, onLogout }){
               <select className="campo" value={form.status||"sondar"} onChange={e=>setForm(f=>({...f,status:e.target.value}))}>
                 {STATUS_KEYS.map(k=><option key={k} value={k}>{STATUS_MAP[k].label}</option>)}
               </select>
-              <input className="campo" placeholder="REFERÊNCIA (ponto de referência)" value={form.referencia||""} onChange={e=>setForm(f=>({...f,referencia:e.target.value}))}/>
-              <input className="campo" placeholder="INDICAÇÃO (quem indicou)" value={form.indicacao||""} onChange={e=>setForm(f=>({...f,indicacao:e.target.value}))}/>
+              <input className="campo" placeholder="REFERÊNCIA (ponto de referência)" value={form.pg||""} onChange={e=>setForm(f=>({...f,pg:e.target.value}))}/>
+              <input className="campo" placeholder="INDICAÇÃO (quem indicou)" value={form.titular||""} onChange={e=>setForm(f=>({...f,titular:e.target.value}))}/>
               {/* HOT CHECKBOX */}
               <label style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",background:form.hot?"rgba(251,191,36,.1)":"#080412",border:`1.5px solid ${form.hot?"#fbbf24":"#2d1b69"}`,borderRadius:10,cursor:"pointer",transition:"all .2s"}}>
                 <input type="checkbox" checked={!!form.hot} onChange={e=>setForm(f=>({...f,hot:e.target.checked}))} style={{width:20,height:20,accentColor:"#fbbf24",cursor:"pointer"}}/>
                 <span style={{fontWeight:700,fontSize:15,color:form.hot?"#fbbf24":"#6b5a8e"}}>🔥 Lead Quente</span>
               </label>
 
-              <textarea className="campo" rows={3} placeholder="HISTÓRICO / OBSERVAÇÃO" value={form.history||""} onFocus={e=>{if(!form.history){const p=historicoAutomatico("observacao");setForm(f=>({...f,history:p}));}} } onChange={e=>setForm(f=>({...f,history:e.target.value}))} style={{resize:"vertical"}}/>
+              <textarea className="campo" rows={2} placeholder="HISTÓRICO / OBSERVAÇÃO" value={form.history||historicoAutomatico("observacao")} onChange={e=>setForm(f=>({...f,history:e.target.value}))} style={{resize:"none"}}/>
               <CamposAvancados form={form} setForm={setForm}/>
             </div>
             <div style={{display:"flex",gap:8,marginTop:18}}>
@@ -885,7 +816,7 @@ function AppPrincipal({ usuario, onLogout }){
               <button className="btn" onClick={fecharModal} style={{color:"#6b5a8e",background:"none",fontSize:22,flexShrink:0}}>✕</button>
             </div>
             <div style={{display:"grid",gap:10,marginBottom:14}}>
-              {[[sel.type,"🏷️","Tipo"],[sel.phone1,"📞","Telefone"],[sel.phone2,"📱","Tel. Secundário"],[sel.email,"✉️","Email"],[(sel.city||sel.state)?[sel.city,sel.state].filter(Boolean).join(" - "):null,"📍","Localização"],[sel.value?fmtValor(sel.value)+(sel.kwp?` · ${sel.kwp} kWp`:""):null,"💰","Valor"],[sel.probability,"🎯","Probabilidade"],[sel.owner,"👤","Responsável"],[sel.referencia,"📌","Referência"],[sel.indicacao,"🤝","Indicação"],[sel.concessionaria,"⚡","Concessionária"]].filter(([v])=>v).map(([val,ic,lbl],i)=>(
+              {[[sel.type,"🏷️","Tipo"],[sel.phone1,"📞","Telefone"],[sel.phone2,"📱","Tel. Secundário"],[sel.email,"✉️","Email"],[(sel.city||sel.state)?[sel.city,sel.state].filter(Boolean).join(" - "):null,"📍","Localização"],[sel.value?fmtValor(sel.value)+(sel.kwp?` · ${sel.kwp} kWp`:""):null,"💰","Valor"],[sel.probability,"🎯","Probabilidade"],[sel.owner,"👤","Responsável"],[sel.pg,"📌","Referência"],[sel.titular,"🤝","Indicação"],[sel.concessionaria,"⚡","Concessionária"]].filter(([v])=>v).map(([val,ic,lbl],i)=>(
                 <div key={i} style={{display:"flex",gap:10,alignItems:"center"}}>
                   <span style={{fontSize:16}}>{ic}</span>
                   <div><div style={{fontSize:11,color:"#6b5a8e"}}>{lbl}</div><div style={{fontSize:14,fontWeight:600}}>{val}</div></div>

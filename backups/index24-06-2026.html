@@ -400,23 +400,7 @@ function AppPrincipal({ usuario, onLogout }){
     setForm({...FORM_VAZIO,owner:usuario.name});
     setModal("busca");
   }
-  async function abrirEditar(l){
-    const { data, error } = await sb
-      .from("leads")
-      .select("*")
-      .eq("id", l.id)
-      .single();
-
-    if(error){
-      console.error(error);
-      aviso("Erro ao carregar lead.","erro");
-      return;
-    }
-
-    setSel(data);
-    setForm({...data});
-    setModal("edit");
-  }
+  function abrirEditar(l){setSel(l);setForm({...l});setModal("edit");}
   function abrirVer(l){setSel(l);setModal("view");}
   function fecharModal(){setModal(null);setSel(null);}
 
@@ -473,13 +457,9 @@ function AppPrincipal({ usuario, onLogout }){
       indicacao:form.indicacao||null,
       prospectando:!!form.prospectando,
     };
-
-    console.log("=== INN DEBUG ===");
-    console.log("Payload:", payload);
     let error;
     if(modal==="add"){({error}=await sb.from("leads").insert(payload));if(!error)aviso("Lead adicionado! ✅");}
     else{({error}=await sb.from("leads").update(payload).eq("id",sel.id));if(!error)aviso("Lead atualizado! ✅");}
-    console.log("Supabase error:", error);
     if(error)aviso("Erro: "+error.message,"erro");
     await carregarStats();await carregarLeads(0,filtroStatus,"");
     setBusca("");
@@ -491,7 +471,6 @@ function AppPrincipal({ usuario, onLogout }){
     if(!confirm("Excluir este lead?"))return;
     setSincStatus("sincronizando");
     const {error}=await sb.from("leads").delete().eq("id",id);
-    console.log("Supabase error:", error);
     if(error)aviso("Erro: "+error.message,"erro");
     else aviso("Lead removido.","erro");
     await carregarLeads(pagina,filtroStatus,busca);
@@ -589,7 +568,6 @@ function AppPrincipal({ usuario, onLogout }){
       ultima_interacao:new Date().toISOString(),
       
     });
-    console.log("Supabase error:", error);
     if(error)aviso("Erro: "+error.message,"erro");
     else aviso("Lead salvo! ✅");
     await carregarLeads(0,filtroStatus,busca);
@@ -621,7 +599,7 @@ function AppPrincipal({ usuario, onLogout }){
           <span style={{fontSize:18,fontWeight:800,color:"#fbbf24"}}>I</span>
         </div>
         <div style={{flex:1,minWidth:0}}>
-          <div style={{fontWeight:800,fontSize:20,letterSpacing:"-0.04em",color:"#fff",lineHeight:1}}>INN <span style={{color:"#6b5a8e",fontSize:10,fontWeight:500}}>v1.010</span></div>
+          <div style={{fontWeight:800,fontSize:20,letterSpacing:"-0.04em",color:"#fff",lineHeight:1}}>INN <span style={{color:"#6b5a8e",fontSize:10,fontWeight:500}}>v1.009</span></div>
           <div style={{fontSize:10,color:"#6b5a8e",fontWeight:600,marginTop:1,display:"flex",alignItems:"center"}}>
             <span className="sync-dot" style={{background:sincStatus==="ok"?"#10b981":sincStatus==="sincronizando"?"#fbbf24":"#ef4444"}}/>
             {totalBanco} leads · {sincStatus==="ok"?"Sincronizado":sincStatus==="sincronizando"?"Salvando...":"Erro"}
@@ -848,8 +826,8 @@ function AppPrincipal({ usuario, onLogout }){
               <select className="campo" value={form.status||"sondar"} onChange={e=>setForm(f=>({...f,status:e.target.value}))}>
                 {STATUS_KEYS.map(k=><option key={k} value={k}>{STATUS_MAP[k].label}</option>)}
               </select>
-              <input className="campo" placeholder="REFERÊNCIA (ponto de referência)" value={form.referencia||""} onChange={e=>setForm(f=>({...f,referencia:e.target.value}))}/>
-              <input className="campo" placeholder="INDICAÇÃO (quem indicou)" value={form.indicacao||""} onChange={e=>setForm(f=>({...f,indicacao:e.target.value}))}/>
+              <input className="campo" placeholder="REFERÊNCIA (ponto de referência)" value={form.pg||""} onChange={e=>setForm(f=>({...f,pg:e.target.value}))}/>
+              <input className="campo" placeholder="INDICAÇÃO (quem indicou)" value={form.titular||""} onChange={e=>setForm(f=>({...f,titular:e.target.value}))}/>
               {/* HOT CHECKBOX */}
               <label style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",background:form.hot?"rgba(251,191,36,.1)":"#080412",border:`1.5px solid ${form.hot?"#fbbf24":"#2d1b69"}`,borderRadius:10,cursor:"pointer",transition:"all .2s"}}>
                 <input type="checkbox" checked={!!form.hot} onChange={e=>setForm(f=>({...f,hot:e.target.checked}))} style={{width:20,height:20,accentColor:"#fbbf24",cursor:"pointer"}}/>
@@ -885,7 +863,7 @@ function AppPrincipal({ usuario, onLogout }){
               <button className="btn" onClick={fecharModal} style={{color:"#6b5a8e",background:"none",fontSize:22,flexShrink:0}}>✕</button>
             </div>
             <div style={{display:"grid",gap:10,marginBottom:14}}>
-              {[[sel.type,"🏷️","Tipo"],[sel.phone1,"📞","Telefone"],[sel.phone2,"📱","Tel. Secundário"],[sel.email,"✉️","Email"],[(sel.city||sel.state)?[sel.city,sel.state].filter(Boolean).join(" - "):null,"📍","Localização"],[sel.value?fmtValor(sel.value)+(sel.kwp?` · ${sel.kwp} kWp`:""):null,"💰","Valor"],[sel.probability,"🎯","Probabilidade"],[sel.owner,"👤","Responsável"],[sel.referencia,"📌","Referência"],[sel.indicacao,"🤝","Indicação"],[sel.concessionaria,"⚡","Concessionária"]].filter(([v])=>v).map(([val,ic,lbl],i)=>(
+              {[[sel.type,"🏷️","Tipo"],[sel.phone1,"📞","Telefone"],[sel.phone2,"📱","Tel. Secundário"],[sel.email,"✉️","Email"],[(sel.city||sel.state)?[sel.city,sel.state].filter(Boolean).join(" - "):null,"📍","Localização"],[sel.value?fmtValor(sel.value)+(sel.kwp?` · ${sel.kwp} kWp`:""):null,"💰","Valor"],[sel.probability,"🎯","Probabilidade"],[sel.owner,"👤","Responsável"],[sel.pg,"📌","Referência"],[sel.titular,"🤝","Indicação"],[sel.concessionaria,"⚡","Concessionária"]].filter(([v])=>v).map(([val,ic,lbl],i)=>(
                 <div key={i} style={{display:"flex",gap:10,alignItems:"center"}}>
                   <span style={{fontSize:16}}>{ic}</span>
                   <div><div style={{fontSize:11,color:"#6b5a8e"}}>{lbl}</div><div style={{fontSize:14,fontWeight:600}}>{val}</div></div>

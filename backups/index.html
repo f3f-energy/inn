@@ -400,23 +400,7 @@ function AppPrincipal({ usuario, onLogout }){
     setForm({...FORM_VAZIO,owner:usuario.name});
     setModal("busca");
   }
-  async function abrirEditar(l){
-    const { data, error } = await sb
-      .from("leads")
-      .select("*")
-      .eq("id", l.id)
-      .single();
-
-    if(error){
-      console.error(error);
-      aviso("Erro ao carregar lead.","erro");
-      return;
-    }
-
-    setSel(data);
-    setForm({...data});
-    setModal("edit");
-  }
+  function abrirEditar(l){setSel(l);setForm({...l});setModal("edit");}
   function abrirVer(l){setSel(l);setModal("view");}
   function fecharModal(){setModal(null);setSel(null);}
 
@@ -621,7 +605,7 @@ function AppPrincipal({ usuario, onLogout }){
           <span style={{fontSize:18,fontWeight:800,color:"#fbbf24"}}>I</span>
         </div>
         <div style={{flex:1,minWidth:0}}>
-          <div style={{fontWeight:800,fontSize:20,letterSpacing:"-0.04em",color:"#fff",lineHeight:1}}>INN <span style={{color:"#6b5a8e",fontSize:10,fontWeight:500}}>v1.010</span></div>
+          <div style={{fontWeight:800,fontSize:20,letterSpacing:"-0.04em",color:"#fff",lineHeight:1}}>INN <span style={{color:"#6b5a8e",fontSize:10,fontWeight:500}}>v1.009</span></div>
           <div style={{fontSize:10,color:"#6b5a8e",fontWeight:600,marginTop:1,display:"flex",alignItems:"center"}}>
             <span className="sync-dot" style={{background:sincStatus==="ok"?"#10b981":sincStatus==="sincronizando"?"#fbbf24":"#ef4444"}}/>
             {totalBanco} leads · {sincStatus==="ok"?"Sincronizado":sincStatus==="sincronizando"?"Salvando...":"Erro"}
