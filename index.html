@@ -636,7 +636,7 @@ function AppPrincipal({ usuario, onLogout }){
 
       {/* NAV */}
       <div style={{display:"flex",gap:3,padding:"8px 12px",borderBottom:"1px solid #2d1b69",overflowX:"auto"}}>
-        {[["dashboard","📊 Painel"],["list","👥 Leads"],["relatorio","📋 Relatório"],["voice","🎙️ Voz"],
+        {[["dashboard","📊 Painel"],["list","👥 Leads"],["aguia","🦅 Águia"],["relatorio","📋 Relatório"],["voice","🎙️ Voz"],
           ...(isFinanceiro?[["financeiro","💰 Propostas"]]:[])
         ].map(([v,l])=>(
           <button key={v} className={`nav-btn${aba===v?" ativo":""}`} onClick={()=>setAba(v)}>{l}</button>
