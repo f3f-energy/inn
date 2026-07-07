@@ -735,7 +735,36 @@ function AppPrincipal({ usuario, onLogout }){
 
         {/* RELATÓRIO */}
         {aba==="relatorio"&&<RelatorioInteligente usuario={usuario} sb={sb} hoje={hoje} fmtValor={fmtValor}/>}
+      
+      {aba==="aguia"&&(
+        <div className="fade">
 
+          <div style={{fontSize:24,fontWeight:800,marginBottom:20}}>
+            🦅 ÁGUIA
+          </div>
+
+          <div className="card" style={{padding:18,marginBottom:12,cursor:"pointer"}}>
+            📷 <b>Caça</b>
+          </div>
+
+          <div className="card" style={{padding:18,marginBottom:12,cursor:"pointer"}}>
+            ⚡ <b>Energia</b>
+          </div>
+
+          <div className="card" style={{padding:18,marginBottom:12,cursor:"pointer"}}>
+            🏢 <b>Fachada</b>
+          </div>
+
+          <div className="card" style={{padding:18,marginBottom:12,cursor:"pointer"}}>
+            🗺️ <b>Mapa</b>
+          </div>
+
+          <div className="card" style={{padding:18,cursor:"pointer"}}>
+            🤖 <b>Inteligência</b>
+          </div>
+
+        </div>
+      )}
         {/* FINANCEIRO */}
         {aba==="financeiro"&&(
           <div className="fade">
