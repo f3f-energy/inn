@@ -9,6 +9,8 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/exifr/dist/full.umd.js"></script>
   <style>
     *{box-sizing:border-box;margin:0;padding:0;}
     body{background:#0a0612;font-family:'Segoe UI',sans-serif;color:#e8eaf6;}
@@ -331,6 +333,10 @@ function AppPrincipal({ usuario, onLogout }){
   const [voiceTexto,setVoiceTexto]=useState("");
   const [voiceParsed,setVoiceParsed]=useState(null);
   const [voiceLoad,setVoiceLoad]=useState(false);
+  const [fotoProcessando,setFotoProcessando]=useState(false);
+  const [fotoTexto,setFotoTexto]=useState("");
+  const [fotoLead,setFotoLead]=useState(null);
+  const [cameraAtiva,setCameraAtiva]=useState(false);
   const [toast,setToast]=useState(null);
   const [carregando,setCarregando]=useState(true);
   const [totalBanco,setTotalBanco]=useState(0);
@@ -342,6 +348,9 @@ function AppPrincipal({ usuario, onLogout }){
   const [resultadosBusca,setResultadosBusca]=useState([]);
   const [buscando,setBuscando]=useState(false);
   const recogRef=useRef(null);
+  const videoFotoRef=useRef(null);
+  const streamFotoRef=useRef(null);
+  const arquivoFotoRef=useRef(null);
   const buscaTimer=useRef(null);
   const POR_PAGINA=50;
 
@@ -375,6 +384,114 @@ function AppPrincipal({ usuario, onLogout }){
   useEffect(()=>{if(toast){const t=setTimeout(()=>setToast(null),3500);return()=>clearTimeout(t);}},[toast]);
 
   const aviso=(msg,tipo="ok")=>setToast({msg,tipo});
+
+  function pararCamera(){
+    streamFotoRef.current?.getTracks().forEach(track=>track.stop());
+    streamFotoRef.current=null;
+    if(videoFotoRef.current) videoFotoRef.current.srcObject=null;
+    setCameraAtiva(false);
+  }
+
+  async function iniciarCamera(){
+    if(!navigator.mediaDevices?.getUserMedia){aviso("Câmera não suportada neste navegador.","erro");return;}
+    try{
+      pararCamera();
+      const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"}},audio:false});
+      streamFotoRef.current=stream;
+      setCameraAtiva(true);
+      setTimeout(async()=>{if(videoFotoRef.current){videoFotoRef.current.srcObject=stream;await videoFotoRef.current.play();}},0);
+    }catch{aviso("Não foi possível acessar a câmera. Verifique a permissão.","erro");}
+  }
+
+  function linkMaps(latitude,longitude){return `https://www.google.com/maps?q=${latitude},${longitude}`;}
+
+  function obterLocalizacaoAtual(){
+    return new Promise(resolve=>{
+      if(!navigator.geolocation){resolve(null);return;}
+      navigator.geolocation.getCurrentPosition(
+        p=>resolve({latitude:p.coords.latitude,longitude:p.coords.longitude}),
+        ()=>resolve(null),{enableHighAccuracy:true,timeout:10000,maximumAge:60000}
+      );
+    });
+  }
+
+  async function prepararImagemOcr(origem){
+    const url=typeof origem==="string"?origem:URL.createObjectURL(origem);
+    try{
+      const img=await new Promise((resolve,reject)=>{const i=new Image();i.onload=()=>resolve(i);i.onerror=reject;i.src=url;});
+      const maior=Math.max(img.naturalWidth,img.naturalHeight);
+      const escala=Math.min(2.2,Math.max(1,2600/maior));
+      const canvas=document.createElement("canvas");canvas.width=Math.round(img.naturalWidth*escala);canvas.height=Math.round(img.naturalHeight*escala);
+      const ctx=canvas.getContext("2d");
+      ctx.filter="grayscale(1) contrast(1.55) brightness(1.08)";
+      ctx.drawImage(img,0,0,canvas.width,canvas.height);
+      return canvas.toDataURL("image/jpeg",.94);
+    }finally{if(typeof origem!=="string")URL.revokeObjectURL(url);}
+  }
+
+  function extrairDadosFoto(texto,gps,linhasOcr=[]){
+    const limpo=(texto||"").replace(/\r/g,"").replace(/[ \t]+/g," ").trim();
+    const linhas=limpo.split("\n").map(l=>l.trim()).filter(Boolean);
+    const email=(limpo.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)||[])[0]||"";
+    const telefones=limpo.match(/(?:\+?55\s*)?(?:\(?\d{2}\)?\s*)?(?:9?\d{4})[-\s]?\d{4}/g)||[];
+    const phone1=telefones[0]?.replace(/\s+/g," ")||"";
+    const linhaValida=l=>{
+      const letras=(l.match(/[A-Za-zÀ-ÿ]/g)||[]).length;
+      return letras>=4&&!/@|www\.|\.com|telefone|tel\.?|cel\.?|whats|energia|solar|endereço|endereco/i.test(l)&&!/[0-9]{5,}/.test(l);
+    };
+    const linhasGrandes=(linhasOcr||[]).filter(l=>linhaValida(l.text||"")&&l.bbox).sort((a,b)=>((b.bbox.y1-b.bbox.y0)*(b.text||"").length)-((a.bbox.y1-a.bbox.y0)*(a.text||"").length));
+    let nomeLinha=(linhasGrandes[0]?.text||linhas.find(linhaValida)||"").replace(/[^A-Za-zÀ-ÿ&' .-]/g," ").replace(/\s+/g," ").trim();
+    // Em fachadas, a categoria (ex.: "Cerâmica") costuma ficar imediatamente acima do nome em letras maiores.
+    if(linhasGrandes.length>1){
+      const principal=linhasGrandes[0], acima=linhasOcr.find(l=>l!==principal&&linhaValida(l.text||"")&&l.bbox&&l.bbox.y1<=principal.bbox.y0&&principal.bbox.y0-l.bbox.y1<(principal.bbox.y1-principal.bbox.y0)*1.8);
+      if(acima) nomeLinha=`${acima.text} ${nomeLinha}`.replace(/[^A-Za-zÀ-ÿ&' .-]/g," ").replace(/\s+/g," ").trim();
+    }
+    const uf=(limpo.match(/\b(AC|AL|AP|AM|BA|CE|DF|ES|GO|MA|MT|MS|MG|PA|PB|PR|PE|PI|RJ|RN|RS|RO|RR|SC|SP|SE|TO)\b/i)||[])[1]||"GO";
+    const cidade=(limpo.match(/(?:cidade|munic[ií]pio)\s*[:\-]?\s*([A-Za-zÀ-ÿ ]{3,})/i)||[])[1]?.trim()||"";
+    const localizacao=gps?linkMaps(gps.latitude,gps.longitude):"";
+    return {...FORM_VAZIO,name:nomeLinha,contato:nomeLinha,phone1,email,city:cidade,state:uf,localizacao,referencia:localizacao||"",owner:usuario.name,history:`🦅 Capturado pelo Águia em ${new Date().toLocaleDateString("pt-BR")}${localizacao?`\n📍 Localização: ${localizacao}`:""}\n${limpo.slice(0,700)}`};
+  }
+
+  async function processarFoto(origem){
+    if(!origem){aviso("Escolha ou tire uma foto primeiro.","erro");return;}
+    if(!window.Tesseract){aviso("Leitor de texto ainda não carregou. Tente novamente.","erro");return;}
+    setFotoProcessando(true);setFotoLead(null);
+    try{
+      let gps=null;
+      if(origem instanceof File&&window.exifr){try{gps=await exifr.gps(origem);}catch{gps=null;}}
+      if(!gps&&typeof origem==="string") gps=await obterLocalizacaoAtual();
+      const imagemOtimizada=await prepararImagemOcr(origem);
+      const {data}=await Tesseract.recognize(imagemOtimizada,"por+eng",{logger:()=>{},tessedit_pageseg_mode:"11"});
+      const text=data.text||"";
+      setFotoTexto(text||"");
+      const lead=extrairDadosFoto(text,gps,data.lines||[]);
+      if(!lead.name){aviso("Não identifiquei um nome. Tente uma foto mais nítida.","erro");}
+      setFotoLead(lead);
+    }catch{aviso("Não consegui ler esta imagem. Tente com mais luz e foco.","erro");}
+    setFotoProcessando(false);
+  }
+
+  function capturarFoto(){
+    const video=videoFotoRef.current;
+    if(!video?.videoWidth){aviso("Aguarde a câmera iniciar.","erro");return;}
+    const canvas=document.createElement("canvas");canvas.width=video.videoWidth;canvas.height=video.videoHeight;
+    canvas.getContext("2d").drawImage(video,0,0);
+    pararCamera();processarFoto(canvas.toDataURL("image/jpeg",.9));
+  }
+
+  async function salvarLeadFoto(){
+    if(!fotoLead?.name?.trim()){aviso("Nome não identificado. Revise os dados antes de salvar.","erro");return;}
+    setSincStatus("sincronizando");
+    const {error}=await sb.from("leads").insert({
+      name:fotoLead.name,company:fotoLead.company||null,phone1:fotoLead.phone1||null,email:fotoLead.email||null,
+      city:fotoLead.city||null,state:fotoLead.state||"GO",status:"sondar",type:fotoLead.type||"Residencial",
+      owner:usuario.name,history:fotoLead.history||null,referencia:fotoLead.referencia||null,concessionaria:"Equatorial",prospectando:true,
+      created_at:new Date().toISOString(),updated_at:new Date().toISOString(),ultima_interacao:new Date().toISOString()
+    });
+    if(error) aviso("Erro: "+error.message,"erro");
+    else{aviso("Lead criado pela foto! ✅");setFotoLead(null);setFotoTexto("");await carregarLeads(0,filtroStatus,"");await carregarStats();}
+    setSincStatus("ok");
+  }
 
   function handleBusca(v){
     setBusca(v);
@@ -636,7 +753,7 @@ function AppPrincipal({ usuario, onLogout }){
 
       {/* NAV */}
       <div style={{display:"flex",gap:3,padding:"8px 12px",borderBottom:"1px solid #2d1b69",overflowX:"auto"}}>
-        {[["dashboard","📊 Painel"],["list","👥 Leads"],["relatorio","📋 Relatório"],["voice","🎙️ Voz"],
+        {[["dashboard","📊 Painel"],["list","👥 Leads"],["relatorio","📋 Relatório"],["voice","🎙️ Voz"],["foto","🦅 Águia"],
           ...(isFinanceiro?[["financeiro","💰 Propostas"]]:[])
         ].map(([v,l])=>(
           <button key={v} className={`nav-btn${aba===v?" ativo":""}`} onClick={()=>setAba(v)}>{l}</button>
@@ -786,6 +903,28 @@ function AppPrincipal({ usuario, onLogout }){
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {aba==="foto"&&(
+          <div className="fade" style={{maxWidth:560,margin:"0 auto"}}>
+            <div style={{fontWeight:800,fontSize:19,marginBottom:6}}>🦅 Águia — criar lead por foto</div>
+            <div style={{fontSize:13,color:"#6b5a8e",lineHeight:1.5,marginBottom:18}}>Fotografe um cartão, ficha ou orçamento. O Águia lê os dados e usa o GPS gravado na foto — ou a localização autorizada do aparelho — para abrir o ponto no Google Maps.</div>
+            <div className="card" style={{padding:14,marginBottom:14}}>
+              {cameraAtiva?<video ref={videoFotoRef} playsInline muted style={{display:"block",width:"100%",maxHeight:330,objectFit:"cover",borderRadius:10,background:"#080412"}}/>:<div style={{minHeight:170,display:"flex",alignItems:"center",justifyContent:"center",textAlign:"center",color:"#6b5a8e",padding:20}}>Use a câmera traseira para melhores resultados<br/>ou selecione uma imagem já tirada.</div>}
+              <div style={{display:"flex",gap:8,marginTop:12,flexWrap:"wrap"}}>
+                {!cameraAtiva?<button className="btn" onClick={iniciarCamera} style={{flex:1,background:"linear-gradient(135deg,#7c3aed,#6d28d9)",color:"#fbbf24",borderRadius:10,padding:12,fontWeight:700}}>📸 Abrir câmera</button>:<><button className="btn" onClick={capturarFoto} style={{flex:1,background:"linear-gradient(135deg,#10b981,#059669)",color:"#fff",borderRadius:10,padding:12,fontWeight:700}}>● Fotografar e ler</button><button className="btn" onClick={pararCamera} style={{background:"#1a0f38",color:"#a78bfa",borderRadius:10,padding:"12px 16px",fontWeight:600}}>Cancelar</button></>}
+                {!cameraAtiva&&<><input ref={arquivoFotoRef} type="file" accept="image/*" capture="environment" onChange={e=>e.target.files?.[0]&&processarFoto(e.target.files[0])} style={{display:"none"}}/><button className="btn" onClick={()=>arquivoFotoRef.current?.click()} style={{flex:1,background:"#1a0f38",color:"#a78bfa",border:"1px solid #2d1b69",borderRadius:10,padding:12,fontWeight:700}}>🖼️ Escolher foto</button></>}
+              </div>
+            </div>
+            {fotoProcessando&&<div className="card fade" style={{padding:18,textAlign:"center",color:"#a78bfa",fontWeight:600}}>⏳ Lendo os dados da imagem...</div>}
+            {fotoLead&&<div className="card fade" style={{padding:18}}>
+              <div style={{fontSize:11,color:"#10b981",fontWeight:700,marginBottom:12,textTransform:"uppercase"}}>✅ Dados identificados</div>
+              <div style={{display:"grid",gap:7,marginBottom:16}}>{[["Contato",fotoLead.contato],["Telefone",fotoLead.phone1],["E-mail",fotoLead.email],["Cidade",fotoLead.city],["UF",fotoLead.state]].map(([rotulo,valor])=><div key={rotulo} style={{display:"flex",gap:8}}><span style={{color:"#6b5a8e",fontSize:12,minWidth:65}}>{rotulo}:</span><span style={{fontSize:14,fontWeight:valor?600:400,color:valor?"#e8eaf6":"#6b5a8e"}}>{valor||"Não identificado"}</span></div>)}</div>
+              <div style={{marginBottom:16,padding:10,background:"#080412",borderRadius:10}}><div style={{fontSize:11,color:"#6b5a8e",marginBottom:5}}>LOCALIZAÇÃO</div>{fotoLead.localizacao?<a href={fotoLead.localizacao} target="_blank" rel="noopener noreferrer" style={{color:"#a78bfa",fontSize:13,fontWeight:700,textDecoration:"none"}}>📍 Abrir no Google Maps</a>:<span style={{fontSize:13,color:"#6b5a8e"}}>GPS não encontrado na foto.</span>}</div>
+              <div style={{display:"flex",gap:8}}><button className="btn" onClick={salvarLeadFoto} style={{flex:1,background:"linear-gradient(135deg,#7c3aed,#6d28d9)",color:"#fbbf24",borderRadius:10,padding:12,fontWeight:700}}>✅ Criar lead</button><button className="btn" onClick={()=>{setForm(fotoLead);setModal("add");setFotoLead(null);}} style={{flex:1,background:"#1a0f38",color:"#a78bfa",borderRadius:10,padding:12,fontWeight:600}}>✏️ Revisar</button></div>
+              {fotoTexto&&<details style={{marginTop:14,color:"#6b5a8e",fontSize:12}}><summary style={{cursor:"pointer"}}>Ver texto lido</summary><div style={{whiteSpace:"pre-wrap",background:"#080412",borderRadius:8,padding:10,marginTop:8,maxHeight:160,overflow:"auto"}}>{fotoTexto}</div></details>}
+            </div>}
           </div>
         )}
       </div>
