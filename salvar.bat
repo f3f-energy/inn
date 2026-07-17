@@ -36,7 +36,7 @@ git commit -m "INN v1.0%VER_NOVA% - %MSG%"
 
 echo.
 echo [2/2] Publicando no Vercel via GitHub...
-git push origin main
+git push origin HEAD:main
 
 if %errorlevel% equ 0 (
   echo.
