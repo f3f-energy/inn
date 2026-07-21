@@ -41,7 +41,13 @@ const STATUS_MAP = {
 };
   
 const STATUS_KEYS = Object.keys(STATUS_MAP);
-const TIPOS = ["Residencial","Empresarial","Outro"];
+const TIPOS = ["Residencial","Empresarial","Rural","Industrial","Outro"];
+const CONCESSIONARIAS = [
+  "Equatorial","Equatorial Alagoas","Equatorial Amapá","Equatorial Ceará","Equatorial Goiás","Equatorial Maranhão","Equatorial Pará","Equatorial Piauí","Equatorial Rio Grande do Sul",
+  "Amazonas Energia","Roraima Energia","Energisa Acre","Energisa Borborema","Energisa Mato Grosso","Energisa Mato Grosso do Sul","Energisa Minas Rio","Energisa Nova Friburgo","Energisa Paraíba","Energisa Rondônia","Energisa Sergipe","Energisa Sul-Sudeste","Energisa Tocantins",
+  "Neoenergia Brasília","Neoenergia Coelba","Neoenergia Cosern","Neoenergia Elektro","Neoenergia Pernambuco","Neoenergia Brasília","Cemig","Copel","Celesc","Light","Enel Ceará","Enel Rio","Enel São Paulo","EDP Espírito Santo","EDP São Paulo",
+  "CPFL Paulista","CPFL Piratininga","CPFL Santa Cruz","RGE","RGE Sul","Cocel","Demei","DMED","Eflul","Forcel","Hidropan","Muxenergia","Sulgipe","Chesp","Boa Vista Energia","Creluz-D","Cooperaliança","Coprel","Certel Energia","Cersul","Cetril","Outra / Cooperativa"
+];
 const hoje = new Date().toISOString().slice(0,10);
 const FORM_VAZIO = {
   name:"", type:"Residencial", phone1:"", phone2:"", email:"",
@@ -52,7 +58,7 @@ const FORM_VAZIO = {
   referencia:"", indicacao:"", hot:false
 };
 
-const PRECO = { Residencial:3500, Empresarial:3200, Outro:3500 };
+const PRECO = { Residencial:3500, Empresarial:3200, Rural:3500, Industrial:3200, Outro:3500 };
   
 function historicoAutomatico(tipo){
   const agora = new Date();
@@ -161,7 +167,11 @@ function CamposAvancados({ form, setForm }){
               <input className="campo" placeholder="Ex: 4.29" value={form.kwp||""} onChange={e=>handleKwp(e.target.value)}/>
             </div>
           </div>
-          <input className="campo" placeholder="CONCESSIONÁRIA" value={form.concessionaria||"Equatorial"} onChange={e=>setForm(f=>({...f,concessionaria:e.target.value}))}/>
+          <div>
+            <div className="lbl">Concessionária</div>
+            <input className="campo" list="lista-concessionarias" placeholder="Equatorial" value={form.concessionaria||"Equatorial"} onChange={e=>setForm(f=>({...f,concessionaria:e.target.value}))}/>
+            <datalist id="lista-concessionarias">{CONCESSIONARIAS.map(c=><option key={c} value={c}/>)}</datalist>
+          </div>
           <input className="campo" placeholder="PROBABILIDADE" value={form.probability||""} onChange={e=>setForm(f=>({...f,probability:e.target.value}))}/>
         </div>
       )}
@@ -579,7 +589,7 @@ function AppPrincipal({ usuario, onLogout }){
     const uf=(limpo.match(/\b(AC|AL|AP|AM|BA|CE|DF|ES|GO|MA|MT|MS|MG|PA|PB|PR|PE|PI|RJ|RN|RS|RO|RR|SC|SP|SE|TO)\b/i)||[])[1]||"GO";
     const cidade=(limpo.match(/(?:cidade|munic[ií]pio)\s*[:\-]?\s*([A-Za-zÀ-ÿ ]{3,})/i)||[])[1]?.trim()||"";
     const localizacao=gps?linkMaps(gps.latitude,gps.longitude):"";
-    return {...FORM_VAZIO,name:nomeLinha,contato:nomeLinha,phone1,email,city:cidade,state:uf,localizacao,referencia:localizacao||"",owner:usuario.name,history:`🦅 Capturado pelo Águia em ${new Date().toLocaleDateString("pt-BR")}${localizacao?`\n📍 Localização: ${localizacao}`:""}\n${limpo.slice(0,700)}`};
+    return {...FORM_VAZIO,name:nomeLinha,contato:nomeLinha,phone1,email,city:cidade,state:uf,localizacao,referencia:localizacao||"",owner:usuario.name,history:`🦅 Capturado pelo Águia em ${new Date().toLocaleDateString("pt-BR")}\n${limpo.slice(0,700)}`};
   }
 
   async function processarFoto(origem){
