@@ -48,9 +48,10 @@ const CONCESSIONARIAS = [
   "Neoenergia Brasília","Neoenergia Coelba","Neoenergia Cosern","Neoenergia Elektro","Neoenergia Pernambuco","Neoenergia Brasília","Cemig","Copel","Celesc","Light","Enel Ceará","Enel Rio","Enel São Paulo","EDP Espírito Santo","EDP São Paulo",
   "CPFL Paulista","CPFL Piratininga","CPFL Santa Cruz","RGE","RGE Sul","Cocel","Demei","DMED","Eflul","Forcel","Hidropan","Muxenergia","Sulgipe","Chesp","Boa Vista Energia","Creluz-D","Cooperaliança","Coprel","Certel Energia","Cersul","Cetril","Outra / Cooperativa"
 ];
+const SEGMENTOS = ["Agronegócio","Alimentação e Bebidas","Atacado e Varejo","Automotivo","Construção Civil","Educação","Hotelaria e Turismo","Indústria","Logística e Transportes","Mineração","Saúde","Serviços","Tecnologia","Outro"];
 const hoje = new Date().toISOString().slice(0,10);
 const FORM_VAZIO = {
-  name:"", type:"Residencial", phone1:"", phone2:"", email:"",
+  name:"", contato:"", segmento:"", type:"Residencial", phone1:"", phone2:"", email:"",
   status:"sondar", city:"", state:"GO", value:"", kwp:"",
   history:"", probability:"", owner:"", visit_or_call:"0",
   budget:false, proposal:false, delivered:false, closed:false,
@@ -502,7 +503,7 @@ function AppPrincipal({ usuario, onLogout }){
       if(!isAdmin) q=q.or(`owner.eq.${usuario.name},owner.is.null`);
       if(filtro!=="todos") q=q.eq("status",filtro);
     }
-    if(termo.trim()) q=q.or(`name.ilike.%${termo}%,phone1.ilike.%${termo}%,company.ilike.%${termo}%,city.ilike.%${termo}%`);
+    if(termo.trim()) q=q.or(`name.ilike.%${termo}%,contato.ilike.%${termo}%,phone1.ilike.%${termo}%,company.ilike.%${termo}%,city.ilike.%${termo}%`);
     q=q.order("updated_at",{ascending:false}).range(pag*POR_PAGINA,(pag+1)*POR_PAGINA-1);
     const {data,error,count}=await q;
     if(error){aviso("Erro ao carregar: "+error.message,"erro");}
@@ -623,7 +624,7 @@ function AppPrincipal({ usuario, onLogout }){
     if(!fotoLead?.name?.trim()){aviso("Nome não identificado. Revise os dados antes de salvar.","erro");return;}
     setSincStatus("sincronizando");
     const {error}=await sb.from("leads").insert({
-      name:fotoLead.name,company:fotoLead.company||null,phone1:fotoLead.phone1||null,email:fotoLead.email||null,
+      name:fotoLead.name,contato:fotoLead.contato||null,segmento:fotoLead.segmento||null,company:fotoLead.company||null,phone1:fotoLead.phone1||null,email:fotoLead.email||null,
       city:fotoLead.city||null,state:fotoLead.state||"GO",status:"sondar",type:fotoLead.type||"Residencial",
       owner:usuario.name,history:fotoLead.history||null,referencia:fotoLead.referencia||null,concessionaria:"Equatorial",prospectando:true,
       created_at:new Date().toISOString(),updated_at:new Date().toISOString(),ultima_interacao:new Date().toISOString()
@@ -645,8 +646,8 @@ function AppPrincipal({ usuario, onLogout }){
   async function buscarDuplicata(termo){
     if(!termo||termo.length<2){setResultadosBusca([]);return;}
     setBuscando(true);
-    const {data}=await sb.from("leads").select("id,name,phone1,city,status,company")
-      .or(`name.ilike.%${termo}%,phone1.ilike.%${termo}%`)
+    const {data}=await sb.from("leads").select("id,name,contato,phone1,city,status,company")
+      .or(`name.ilike.%${termo}%,contato.ilike.%${termo}%,phone1.ilike.%${termo}%`)
       .limit(5);
     setResultadosBusca(data||[]);
     setBuscando(false);
@@ -701,6 +702,8 @@ function AppPrincipal({ usuario, onLogout }){
     const tipo=form.type||"Residencial";
     const payload={  
       name:form.name,
+      contato:form.contato||null,
+      segmento:form.segmento||null,
       company:form.company||null,
       phone1:form.phone1||null,
       phone2:form.phone2||null,
@@ -789,8 +792,8 @@ function AppPrincipal({ usuario, onLogout }){
   }
 
   function exportarCSV(){
-    const cab=["Nome","Tipo","Empresa","Telefone","Status","Cidade","Valor","kWp","Responsável"];
-    const lin=leads.map(l=>[l.name,l.type,l.company,l.phone1,l.status,l.city,l.value,l.kwp,l.owner].map(v=>`"${v||""}"`).join(","));
+    const cab=["Nome","Contato","Segmento","Tipo","Empresa","Telefone","Status","Cidade","Valor","kWp","Responsável"];
+    const lin=leads.map(l=>[l.name,l.contato,l.segmento,l.type,l.company,l.phone1,l.status,l.city,l.value,l.kwp,l.owner].map(v=>`"${v||""}"`).join(","));
     const csv=[cab.join(","),...lin].join("\n");
     const blob=new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8;"});
     const url=URL.createObjectURL(blob);
@@ -817,7 +820,7 @@ function AppPrincipal({ usuario, onLogout }){
         method:"POST",headers:{"Content-Type":"application/json"},
         body:JSON.stringify({
           model:"claude-sonnet-4-20250514",max_tokens:600,
-          system:`Extraia dados de leads de energia solar. Retorne SOMENTE JSON: name, company, phone1, city, state (UF), status (sondar/lead/agendar/visitar/prospect/proposal/contract/client), value (número), kwp (número), history. Sem markdown.`,
+          system:`Extraia dados de leads de energia solar. Retorne SOMENTE JSON: name, contato, segmento, company, phone1, city, state (UF), status (sondar/lead/agendar/visitar/prospect/proposal/contract/client), value (número), kwp (número), history. Sem markdown.`,
           messages:[{role:"user",content:texto}]
         })
       });
@@ -833,7 +836,7 @@ function AppPrincipal({ usuario, onLogout }){
     if(!voiceParsed?.name){aviso("Nome não identificado.","erro");return;}
     setSincStatus("sincronizando");
     const {error}=await sb.from("leads").insert({
-      name:voiceParsed.name,company:voiceParsed.company||null,
+      name:voiceParsed.name,contato:voiceParsed.contato||null,segmento:voiceParsed.segmento||null,company:voiceParsed.company||null,
       phone1:voiceParsed.phone1||null,city:voiceParsed.city||null,
       state:voiceParsed.state||"GO",status:voiceParsed.status||"sondar",
       value:voiceParsed.value?parseFloat(voiceParsed.value):null,
@@ -1063,7 +1066,7 @@ function AppPrincipal({ usuario, onLogout }){
               <div className="card fade" style={{padding:20,textAlign:"left"}}>
                 <div style={{fontSize:11,color:"#10b981",fontWeight:700,marginBottom:12,textTransform:"uppercase"}}>✅ Lead identificado</div>
                 <div style={{display:"grid",gap:6,marginBottom:16}}>
-                  {[["Nome",voiceParsed.name],["Telefone",voiceParsed.phone1],["Cidade",voiceParsed.city],["Status",statusInfo(voiceParsed.status).label],["Valor",fmtValor(voiceParsed.value)],["kWp",voiceParsed.kwp],["Obs",voiceParsed.history]].map(([k,v])=>v?(
+                  {[["Nome",voiceParsed.name],["Contato",voiceParsed.contato],["Segmento",voiceParsed.segmento],["Telefone",voiceParsed.phone1],["Cidade",voiceParsed.city],["Status",statusInfo(voiceParsed.status).label],["Valor",fmtValor(voiceParsed.value)],["kWp",voiceParsed.kwp],["Obs",voiceParsed.history]].map(([k,v])=>v?(
                     <div key={k} style={{display:"flex",gap:8}}><span style={{fontSize:12,color:"#6b5a8e",minWidth:70}}>{k}:</span><span style={{fontSize:13,color:"#e8eaf6",fontWeight:600}}>{v}</span></div>
                   ):null)}
                 </div>
@@ -1120,7 +1123,7 @@ function AppPrincipal({ usuario, onLogout }){
                 {resultadosBusca.map(l=>(
                   <div key={l.id} className="busca-item" onClick={()=>selecionarExistente(l)}>
                     <div style={{fontWeight:700}}>{l.name}</div>
-                    <div style={{fontSize:11,color:"#6b5a8e"}}>{[l.phone1,l.city].filter(Boolean).join(" · ")} · <span style={{color:statusInfo(l.status).cor}}>{statusInfo(l.status).label}</span></div>
+                    <div style={{fontSize:11,color:"#6b5a8e"}}>{[l.contato,l.phone1,l.city].filter(Boolean).join(" · ")} · <span style={{color:statusInfo(l.status).cor}}>{statusInfo(l.status).label}</span></div>
                   </div>
                 ))}
               </div>
@@ -1148,7 +1151,12 @@ function AppPrincipal({ usuario, onLogout }){
               <select className="campo" value={form.type||"Residencial"} onChange={e=>setForm(f=>({...f,type:e.target.value}))}>
                 {TIPOS.map(t=><option key={t}>{t}</option>)}
               </select>
+              <select className="campo" value={form.segmento||""} onChange={e=>setForm(f=>({...f,segmento:e.target.value}))}>
+                <option value="">SEGMENTO DE MERCADO</option>
+                {SEGMENTOS.map(s=><option key={s} value={s}>{s}</option>)}
+              </select>
               <input className="campo" placeholder="EMPRESA / COMÉRCIO" value={form.company||""} onChange={e=>setForm(f=>({...f,company:e.target.value}))}/>
+              <input className="campo" placeholder="CONTATO RESPONSÁVEL" value={form.contato||""} onChange={e=>setForm(f=>({...f,contato:e.target.value}))}/>
               <input className="campo" placeholder="TELEFONE" value={form.phone1||""} onChange={e=>setForm(f=>({...f,phone1:e.target.value}))}/>
               <div style={{display:"grid",gridTemplateColumns:"1fr 64px",gap:8}}>
                 <input className="campo" placeholder="CIDADE" value={form.city||""} onChange={e=>setForm(f=>({...f,city:e.target.value}))}/>
@@ -1194,7 +1202,7 @@ function AppPrincipal({ usuario, onLogout }){
               <button className="btn" onClick={fecharModal} style={{color:"#6b5a8e",background:"none",fontSize:22,flexShrink:0}}>✕</button>
             </div>
             <div style={{display:"grid",gap:10,marginBottom:14}}>
-              {[[sel.type,"🏷️","Tipo"],[sel.phone1,"📞","Telefone"],[sel.phone2,"📱","Tel. Secundário"],[sel.email,"✉️","Email"],[(sel.city||sel.state)?[sel.city,sel.state].filter(Boolean).join(" - "):null,"📍","Localização"],[sel.value?fmtValor(sel.value)+(sel.kwp?` · ${sel.kwp} kWp`:""):null,"💰","Valor"],[sel.probability,"🎯","Probabilidade"],[sel.owner,"👤","Responsável"],[sel.referencia,"📌","Referência"],[sel.indicacao,"🤝","Indicação"],[sel.concessionaria,"⚡","Concessionária"]].filter(([v])=>v).map(([val,ic,lbl],i)=>(
+              {[[sel.contato,"👤","Contato"],[sel.segmento,"🏢","Segmento"],[sel.type,"🏷️","Tipo"],[sel.phone1,"📞","Telefone"],[sel.phone2,"📱","Tel. Secundário"],[sel.email,"✉️","Email"],[(sel.city||sel.state)?[sel.city,sel.state].filter(Boolean).join(" - "):null,"📍","Localização"],[sel.value?fmtValor(sel.value)+(sel.kwp?` · ${sel.kwp} kWp`:""):null,"💰","Valor"],[sel.probability,"🎯","Probabilidade"],[sel.owner,"👤","Responsável"],[sel.referencia,"📌","Referência"],[sel.indicacao,"🤝","Indicação"],[sel.concessionaria,"⚡","Concessionária"]].filter(([v])=>v).map(([val,ic,lbl],i)=>(
                 <div key={i} style={{display:"flex",gap:10,alignItems:"center"}}>
                   <span style={{fontSize:16}}>{ic}</span>
                   <div><div style={{fontSize:11,color:"#6b5a8e"}}>{lbl}</div><div style={{fontSize:14,fontWeight:600}}>{val}</div></div>
